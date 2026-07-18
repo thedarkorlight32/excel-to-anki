@@ -47,7 +47,7 @@ This creates an executable JAR file at `target/excel-to-anki-1.0-SNAPSHOT.jar`
 ### Prepare Your Excel File
 
 1. Create an Excel file (.xlsx) with the following structure:
-   - **First row**: Headers named "English" and "Farsi"
+   - **First row**: Headers for your source and target columns (defaults: "English" and "Farsi")
    - **Subsequent rows**: Your vocabulary pairs
 
 **Example Excel Structure:**
@@ -66,7 +66,11 @@ This creates an executable JAR file at `target/excel-to-anki-1.0-SNAPSHOT.jar`
 ### Run the Application
 
 ```bash
-java -jar target/excel-to-anki-1.0-SNAPSHOT.jar /path/to/your/file.xlsx
+java -jar target/excel-to-anki-1.0-SNAPSHOT.jar /path/to/your/file.xlsx [sourceColumnName] [targetColumnName] [sourceTtsLang] [targetTtsLang]
+# Example using defaults (no target voice if target language not supported):
+java -jar target/excel-to-anki-1.0-SNAPSHOT.jar ~/vocabulary.xlsx
+# Example specifying columns and both TTS languages:
+java -jar target/excel-to-anki-1.0-SNAPSHOT.jar ~/vocabulary.xlsx English Farsi en nl
 ```
 
 **Example:**
@@ -138,11 +142,13 @@ excel-to-anki/
 
 ## Configuration
 
-To modify language pairs or parameters, edit `App.kt`:
+To modify language pairs, columns, or TTS languages, pass optional positional arguments to the JAR:
 
-- **Change language**: Modify the `lang` parameter in `synthesizeWithGoogleTranslateTts()` calls
-- **TTS Engine**: Parameters are in `fetchTranslateTtsChunk()` function
-- **Audio chunk size**: Adjust `maxLen` parameter in `synthesizeWithGoogleTranslateTts()` (line ~200)
+- Usage: java -jar target/excel-to-anki-1.0-SNAPSHOT.jar <file.xlsx> [sourceColumnName] [targetColumnName] [sourceTtsLang] [targetTtsLang]
+- Defaults: sourceColumnName="English", targetColumnName="Farsi", sourceTtsLang="en", targetTtsLang=sourceTtsLang
+- Supported TTS languages for the back/target field (current build): nl, en. If the targetTtsLang is not in this list, the back field will not include synthesized audio.
+- TTS Engine: Parameters are in `fetchTranslateTtsChunk()` function
+- Audio chunk size: Adjust `maxLen` parameter in `synthesizeWithGoogleTranslateTts()` (line ~200)
 
 ## Troubleshooting
 
@@ -162,8 +168,8 @@ To modify language pairs or parameters, edit `App.kt`:
 
 ### Issue: "Missing required columns 'English' and/or 'Farsi'"
 **Solution**: Ensure your Excel file has:
-- A header row with exactly these column names: "English" and "Farsi"
-- Case-sensitive match (uppercase E and F)
+- A header row with the source and target column names (defaults: "English" and "Farsi")
+- Case-insensitive match; you may pass different column names as optional arguments when running the JAR
 
 ### Issue: Maven build fails
 **Possible causes**:

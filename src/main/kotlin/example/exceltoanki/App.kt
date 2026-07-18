@@ -13,7 +13,8 @@ import java.nio.file.Paths
 
 fun main(args: Array<String>) {
 	if (args.isEmpty()) {
-		println("Usage: App <path-to-excel>")
+		println("Usage: App <path-to-excel> [sourceColumnName] [targetColumnName] [sourceTtsLang] [targetTtsLang]")
+		println("Defaults: source=\"English\", target=\"Farsi\", sourceTtsLang=\"en\", targetTtsLang=sourceTtsLang")
 		return
 	}
 
@@ -23,8 +24,13 @@ fun main(args: Array<String>) {
 		return
 	}
 
+	val sourceColName = if (args.size >= 2) args[1] else "English"
+	val targetColName = if (args.size >= 3) args[2] else "Farsi"
+	val sourceTtsLang = if (args.size >= 4) args[3] else "en"
+	val targetTtsLang = if (args.size >= 5) args[4] else sourceTtsLang
+
 	try {
-		createAnkiPackageFromExcel(excelPath)
+		createAnkiPackageFromExcel(excelPath, sourceColName, targetColName, sourceTtsLang, targetTtsLang)
 		println("Done.")
 	} catch (e: Exception) {
 		System.err.println("Error: ${e.message}")
@@ -136,41 +142,55 @@ fun buildHtmlFromRichText(richText: XSSFRichTextString): String {
  * For each row, synthesize speech using Google Translate's TTS endpoint, write notes as CSV,
  * and produce an Anki package (.apkg) using Python genanki (for full Anki compatibility).
  */
-fun createAnkiPackageFromExcel(excelPath: Path) {
+fun createAnkiPackageFromExcel(excelPath: Path, sourceColName: String = "English", targetColName: String = "Farsi", sourceTtsLang: String = "en", targetTtsLang: String = "en") {
 	FileInputStream(excelPath.toFile()).use { fis ->
 		val wb = WorkbookFactory.create(fis)
 		val sheet = wb.getSheetAt(0)
 		val header = sheet.getRow(0) ?: throw IllegalArgumentException("First sheet must have a header row")
 
-		val engCol = findColumnIndex(header, "English")
-		val faCol = findColumnIndex(header, "Farsi")
-		if (engCol < 0 || faCol < 0) {
-			throw IllegalArgumentException("Missing required columns 'English' and/or 'Farsi' in first row.")
+		val sourceCol = findColumnIndex(header, sourceColName)
+		val targetCol = findColumnIndex(header, targetColName)
+		if (sourceCol < 0 || targetCol < 0) {
+			throw IllegalArgumentException("Missing required columns '$sourceColName' and/or '$targetColName' in first row.")
 		}
 
 		val notesCsv = StringBuilder()
 		val mediaFiles = mutableListOf<Pair<String, ByteArray>>()
+		// Supported TTS languages for target/back field. Extend as needed.
+		val supportedTts = setOf("nl", "en")
 
 		// iterate rows
 		for (r in 1..sheet.lastRowNum) {
 			val row = sheet.getRow(r) ?: continue
-			val simpleEng = row.getCell(engCol).toString().trim()
-			val eng = getCellTextWithFormatting(row.getCell(engCol)).trim()
-			val fa = getCellTextWithFormatting(row.getCell(faCol)).trim()
-			if (eng.isEmpty()) continue
+			val simpleEng = row.getCell(sourceCol).toString().trim()
+			val source = getCellTextWithFormatting(row.getCell(sourceCol)).trim()
+			val target = getCellTextWithFormatting(row.getCell(targetCol)).trim()
+			if (source.isEmpty()) continue
 
-			val safeName = "audio_${r}.mp3"
-
+			val srcName = "audio_${r}_src.mp3"
+			
 			// Synthesize using Google Translate TTS endpoint (no Cloud client library required).
 			// Strip HTML tags for TTS (we want to synthesize plain text, not tags)
 			try {
 				val plainTextForTts = stripHtmlTags(simpleEng)
-				val audioBytes = synthesizeWithGoogleTranslateTts(plainTextForTts, "en")
-				mediaFiles.add(safeName to audioBytes)
-				val front = "$eng <br>[sound:$safeName]"
-				val back = fa
+				val audioBytes = synthesizeWithGoogleTranslateTts(plainTextForTts, sourceTtsLang)
+				mediaFiles.add(srcName to audioBytes)
+				var front = "$source <br>[sound:$srcName]"
+				var back = target
+				// Attempt to synthesize back/target audio if target language is supported
+				if (targetTtsLang.lowercase() in supportedTts) {
+					try {
+						val plainTarget = stripHtmlTags(target)
+						val tgtName = "audio_${r}_tgt.mp3"
+						val tgtBytes = synthesizeWithGoogleTranslateTts(plainTarget, targetTtsLang)
+						mediaFiles.add(tgtName to tgtBytes)
+						back = "$target <br>[sound:$tgtName]"
+					} catch (e: Exception) {
+						System.err.println("Warning: failed to synthesize target row $r: ${e.message}")
+					}
+				}
 				notesCsv.append(escapeCsv(front)).append(',').append(escapeCsv(back)).append('\n')
-				println("Processed row $r: '$eng' -> $safeName")
+				println("Processed row $r: '$source' -> $srcName")
 			} catch (e: Exception) {
 				System.err.println("Warning: failed to synthesize row $r: ${e.message}")
 			}
