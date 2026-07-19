@@ -13,7 +13,7 @@ import java.nio.file.Paths
 
 fun main(args: Array<String>) {
 	if (args.isEmpty()) {
-		println("Usage: App <path-to-excel> [sourceColumnName] [targetColumnName] [sourceTtsLang] [targetTtsLang]")
+		println("Usage: App <path-to-excel> [sourceColumnName] [targetColumnName] [sourceTtsLang] [targetTtsLang] [--update <path-to-existing-apkg>]")
 		println("Defaults: source=\"English\", target=\"Farsi\", sourceTtsLang=\"en\", targetTtsLang=sourceTtsLang")
 		return
 	}
@@ -29,8 +29,21 @@ fun main(args: Array<String>) {
 	val sourceTtsLang = if (args.size >= 4) args[3] else "en"
 	val targetTtsLang = if (args.size >= 5) args[4] else sourceTtsLang
 
+	val updateIdx = args.indexOf("--update")
+	val existingApkg = if (updateIdx >= 0 && updateIdx + 1 < args.size) {
+		val path = Paths.get(args[updateIdx + 1]).toFile()
+		println("Update APKG file: ${path.absolutePath}")
+		if (!path.exists()) {
+			System.err.println("APKG file not found: ${path.absolutePath}")
+			return
+		}
+		path
+	} else {
+		null
+	}
+
 	try {
-		createAnkiPackageFromExcel(excelPath, sourceColName, targetColName, sourceTtsLang, targetTtsLang)
+		createAnkiPackageFromExcel(excelPath, sourceColName, targetColName, sourceTtsLang, targetTtsLang, existingApkg)
 		println("Done.")
 	} catch (e: Exception) {
 		System.err.println("Error: ${e.message}")
@@ -42,8 +55,9 @@ fun main(args: Array<String>) {
  * Read first sheet of the Excel file. Expects header row with columns named "English" and "Farsi".
  * For each row, synthesize speech using Google Translate's TTS endpoint, write notes as CSV,
  * and produce an Anki package (.apkg) using Python genanki (for full Anki compatibility).
+ * If existingApkg is provided, add cards to the existing package instead of creating a new one.
  */
-fun createAnkiPackageFromExcel(excelPath: Path, sourceColName: String = "English", targetColName: String = "Farsi", sourceTtsLang: String = "en", targetTtsLang: String = "en") {
+fun createAnkiPackageFromExcel(excelPath: Path, sourceColName: String = "English", targetColName: String = "Farsi", sourceTtsLang: String = "en", targetTtsLang: String = "en", existingApkg: File? = null) {
 	// Step 1: read excel into lightweight rows
 	val reader = ExcelReader()
 	val rows = reader.read(excelPath, sourceColName, targetColName)
@@ -54,11 +68,18 @@ fun createAnkiPackageFromExcel(excelPath: Path, sourceColName: String = "English
 	val builder = CardBuilder(tts, supportedTts)
 	val cards = builder.build(rows, sourceTtsLang, targetTtsLang)
 
-	// Step 3: write CSV, media and produce .apkg
+	// Step 3: write CSV, media and produce/update .apkg
 	val baseName = excelPath.fileName.toString().substringBeforeLast('.')
-	val outApkg = excelPath.parent.resolve("$baseName.apkg").toFile()
+	val outApkg = existingApkg ?: excelPath.parent.resolve("$baseName.apkg").toFile()
 	val writer = AnkiWriter()
 	val writeResult = writer.write(cards)
-	ApkgCreator().create(outApkg, writeResult.notesCsvFile, writeResult.mediaDir, baseName, writeResult.tmpWorkDir)
-	println("Created package: ${outApkg.absolutePath}")
+	
+	val creator = ApkgCreator()
+	if (existingApkg != null) {
+		creator.update(outApkg, writeResult.notesCsvFile, writeResult.mediaDir, writeResult.tmpWorkDir)
+		println("Updated package: ${outApkg.absolutePath}")
+	} else {
+		creator.create(outApkg, writeResult.notesCsvFile, writeResult.mediaDir, baseName, writeResult.tmpWorkDir)
+		println("Created package: ${outApkg.absolutePath}")
+	}
 }
