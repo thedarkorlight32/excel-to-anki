@@ -16,6 +16,8 @@ import zipfile
 import json
 import tempfile
 import shutil
+import sqlite3
+import time
 
 def load_notes(csv_path):
     notes = []
@@ -34,6 +36,30 @@ def extract_apkg(apkg_path):
     with zipfile.ZipFile(apkg_path, 'r') as zip_ref:
         zip_ref.extractall(temp_dir)
     return temp_dir
+
+def load_existing_notes_from_apkg(apkg_path):
+    """Load existing notes from APKG database."""
+    temp_dir = extract_apkg(apkg_path)
+    col_path = os.path.join(temp_dir, 'collection.anki2')
+    notes = []
+    
+    try:
+        conn = sqlite3.connect(col_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Get all notes with their fields
+        cursor.execute("SELECT id, flds FROM notes ORDER BY id")
+        for row in cursor.fetchall():
+            fields = row['flds'].split('\x1f')  # Anki uses \x1f as field separator
+            if len(fields) >= 2:
+                notes.append((fields[0], fields[1]))
+        
+        conn.close()
+    finally:
+        shutil.rmtree(temp_dir)
+    
+    return notes
 
 def load_deck_from_apkg(apkg_path):
     """Load existing deck from APKG file."""
@@ -98,17 +124,21 @@ def main():
     p.add_argument('--update', default=None, help='Existing APKG to update instead of creating new')
     args = p.parse_args()
 
-    notes = load_notes(args.csv)
-    if not notes:
+    new_notes = load_notes(args.csv)
+    if not new_notes:
         print('No notes found in', args.csv)
         sys.exit(1)
 
     # Determine deck ID and name
+    all_notes = list(new_notes)
     if args.update:
         if not os.path.exists(args.update):
             print(f"Error: existing APKG not found: {args.update}", file=sys.stderr)
             sys.exit(1)
         deck_id, deck_name, model_id, _ = load_deck_from_apkg(args.update)
+        # Load existing notes and merge
+        existing_notes = load_existing_notes_from_apkg(args.update)
+        all_notes = existing_notes + list(new_notes)
     else:
         deck_id = abs(hash(args.name)) % (10**9)
         deck_name = args.name
@@ -135,7 +165,7 @@ def main():
             if os.path.isfile(full):
                 pkg_media.append(full)
 
-    for front, back in notes:
+    for front, back in all_notes:
         note = genanki.Note(model=model, fields=[front, back])
         deck.add_note(note)
 
