@@ -1,17 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>excel-to-anki</groupId>
-  <artifactId>excel-to-anki</artifactId>
-  <packaging>jar</packaging>
+  <artifactId>excel-to-anki-parent</artifactId>
+  <packaging>pom</packaging>
   <version>1.0-SNAPSHOT</version>
-  <name>excel-to-anki</name>
+  <name>excel-to-anki-parent</name>
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>4.0.0</version>
     <relativePath/> <!-- lookup parent from repository -->
   </parent>
+
+  <modules>
+    <module>excel-to-anki-core</module>
+    <module>excel-to-anki-ui</module>
+  </modules>
 
   <properties>
     <java.version>21</java.version>
@@ -31,131 +37,126 @@
     </repository>
   </repositories>
 
-  <dependencies>
-    <!-- Spring Boot Web Starter -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
+  <dependencyManagement>
+    <dependencies>
+      <!-- Kotlin -->
+      <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-stdlib</artifactId>
+        <version>${kotlin.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-reflect</artifactId>
+        <version>${kotlin.version}</version>
+      </dependency>
 
-    <!-- Kotlin -->
-    <dependency>
-      <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-stdlib</artifactId>
-      <version>${kotlin.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-reflect</artifactId>
-      <version>${kotlin.version}</version>
-    </dependency>
+      <!-- Kotlin Coroutines -->
+      <dependency>
+        <groupId>org.jetbrains.kotlinx</groupId>
+        <artifactId>kotlinx-coroutines-core</artifactId>
+        <version>1.7.3</version>
+      </dependency>
 
-    <!-- Test Dependencies -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jetbrains.kotlinx</groupId>
-      <artifactId>kotlinx-coroutines-core</artifactId>
-    </dependency>
+      <!-- Apache POI for reading Excel (XSSF / OOXML) -->
+      <dependency>
+        <groupId>org.apache.poi</groupId>
+        <artifactId>poi-ooxml</artifactId>
+        <version>5.2.3</version>
+      </dependency>
 
-    <!-- Kotlin stdlib -->
-    <dependency>
-      <groupId>org.jetbrains.kotlin</groupId>
-      <artifactId>kotlin-stdlib</artifactId>
-      <version>1.8.22</version>
-    </dependency>
+      <!-- Commons IO (optional, helpful for I/O utilities) -->
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>2.11.0</version>
+      </dependency>
 
-    <!-- Apache POI for reading Excel (XSSF / OOXML) -->
-    <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi-ooxml</artifactId>
-      <version>5.2.3</version>
-    </dependency>
+      <!-- SQLite JDBC for creating Anki collection file (collection.anki2) -->
+      <dependency>
+        <groupId>org.xerial</groupId>
+        <artifactId>sqlite-jdbc</artifactId>
+        <version>3.36.0.3</version>
+      </dependency>
 
-    <!-- Commons IO (optional, helpful for I/O utilities) -->
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.11.0</version>
-    </dependency>
-
-    <!-- SQLite JDBC for creating Anki collection file (collection.anki2) -->
-    <dependency>
-      <groupId>org.xerial</groupId>
-      <artifactId>sqlite-jdbc</artifactId>
-      <version>3.36.0.3</version>
-    </dependency>
-  </dependencies>
+      <!-- Compose for Desktop/Multiplatform UI -->
+      <dependency>
+        <groupId>org.jetbrains.compose.ui</groupId>
+        <artifactId>ui</artifactId>
+        <version>1.6.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.compose.foundation</groupId>
+        <artifactId>foundation</artifactId>
+        <version>1.6.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jetbrains.compose.material</groupId>
+        <artifactId>material</artifactId>
+        <version>1.6.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
-    <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
-    <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
+    <pluginManagement>
+      <plugins>
+        <!-- Kotlin Maven Plugin -->
+        <plugin>
+          <groupId>org.jetbrains.kotlin</groupId>
+          <artifactId>kotlin-maven-plugin</artifactId>
+          <version>${kotlin.version}</version>
+          <executions>
+            <execution>
+              <id>compile</id>
+              <phase>compile</phase>
+              <goals>
+                <goal>compile</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>test-compile</id>
+              <phase>test-compile</phase>
+              <goals>
+                <goal>test-compile</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <jvmTarget>${java.version}</jvmTarget>
+          </configuration>
+        </plugin>
 
-    <plugins>
-      <!-- Spring Boot Maven Plugin -->
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-
-      <!-- Kotlin Maven Plugin -->
-      <plugin>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-maven-plugin</artifactId>
-        <version>${kotlin.version}</version>
-        <executions>
-          <execution>
-            <id>compile</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>test-compile</id>
-            <phase>test-compile</phase>
-            <goals>
-              <goal>test-compile</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <jvmTarget>${java.version}</jvmTarget>
-        </configuration>
-      </plugin>
-
-      <!-- Java Compiler Plugin -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default-compile</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>default-testCompile</id>
-            <phase>none</phase>
-          </execution>
-          <execution>
-            <id>java-compile</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>java-test-compile</id>
-            <phase>test-compile</phase>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
+        <!-- Java Compiler Plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>default-compile</id>
+              <phase>none</phase>
+            </execution>
+            <execution>
+              <id>default-testCompile</id>
+              <phase>none</phase>
+            </execution>
+            <execution>
+              <id>java-compile</id>
+              <phase>compile</phase>
+              <goals>
+                <goal>compile</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>java-test-compile</id>
+              <phase>test-compile</phase>
+              <goals>
+                <goal>testCompile</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
 </project>

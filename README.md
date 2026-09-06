@@ -40,42 +40,67 @@ cd excel-to-anki
 mvn clean package
 ```
 
-This creates an executable JAR file at `target/excel-to-anki-1.0-SNAPSHOT.jar`
+This creates two executable JAR files:
+- `excel-to-anki-core/target/excel-to-anki-cli.jar` - Command-line interface
+- `excel-to-anki-ui/target/excel-to-anki-ui.jar` - Graphical user interface
+
+## Quick Start
+
+### Run the GUI (Recommended for Most Users)
+```bash
+# macOS/Linux
+./run-ui.sh
+
+# Windows
+run-ui.bat
+
+# Or directly with Java
+java -jar excel-to-anki-ui/target/excel-to-anki-ui.jar
+```
+
+### Run the CLI (For Automation/Scripting)
+```bash
+# macOS/Linux
+./run-cli.sh ~/vocabulary.xlsx
+
+# Windows
+run-cli.bat C:\Users\YourName\vocabulary.xlsx
+
+# Or directly with Java
+java -jar excel-to-anki-core/target/excel-to-anki-cli.jar ~/vocabulary.xlsx
+```
+
+For detailed usage instructions, see [RUNNING.md](RUNNING.md)
 
 ## Usage
 
-### Prepare Your Excel File
+### Option 1: Using the GUI (Recommended)
 
-1. Create an Excel file (.xlsx) with the following structure:
-   - **First row**: Headers for your source and target columns (defaults: "English" and "Farsi")
-   - **Subsequent rows**: Your vocabulary pairs
-
-**Example Excel Structure:**
-
-| English | Farsi |
-|---------|-------|
-| Hello | سلام |
-| **Book** | *کتاب* |
-| <u>Water</u> | آب |
-
-**Notes on Formatting:**
-- You can apply **bold**, *italic*, or <u>underline</u> formatting to any text in Excel
-- These styles will be preserved in your Anki flashcards
-- Only the text content is used for audio synthesis (styles are not read aloud)
-
-### Run the Application
+Build and run the UI module:
 
 ```bash
-java -jar target/excel-to-anki-1.0-SNAPSHOT.jar /path/to/your/file.xlsx [sourceColumnName] [targetColumnName] [sourceTtsLang] [targetTtsLang]
+mvn clean package
+java -cp excel-to-anki-ui/target/excel-to-anki-ui-1.0-SNAPSHOT.jar:excel-to-anki-core/target/excel-to-anki-core-1.0-SNAPSHOT.jar example.exceltoanki.ui.ExcelToAnkiUIKt
+```
+
+The GUI provides:
+- **Upload Button**: Select an Excel file (.xlsx)
+- **Source Language Dropdown**: Select source language (EN, NL, NONE)
+- **Target Language Dropdown**: Select target language (EN, NL, NONE)
+- **Progress Bar**: Visual feedback during conversion
+- **Status Messages**: Real-time progress updates
+- **Convert Button**: Start the conversion process
+
+### Option 2: Using the Command Line
+
+Use the core module's CLI for batch processing or scripting:
+
+```bash
+java -cp excel-to-anki-core/target/excel-to-anki-core-1.0-SNAPSHOT.jar:other-deps.jar example.exceltoanki.AppKt /path/to/your/file.xlsx [sourceColumnName] [targetColumnName] [sourceTtsLang] [targetTtsLang]
 # Example using defaults (no target voice if target language not supported):
 java -jar target/excel-to-anki-1.0-SNAPSHOT.jar ~/vocabulary.xlsx
 # Example specifying columns and both TTS languages:
 java -jar target/excel-to-anki-1.0-SNAPSHOT.jar ~/vocabulary.xlsx English Farsi en nl
-```
-
-**Example:**
-```bash
-java -jar target/excel-to-anki-1.0-SNAPSHOT.jar ~/vocabulary.xlsx
 ```
 
 ### Output
@@ -106,18 +131,76 @@ Done.
 
 ## Project Structure
 
+The project is now organized into a multi-module Maven structure:
+
 ```
 excel-to-anki/
-├── src/
-│   ├── main/
-│   │   └── kotlin/example/exceltoanki/
-│   │       └── App.kt              # Main application code
-│   └── test/
-│       └── kotlin/                 # Test files
-├── create_apkg_from_csv.py         # Python script for .apkg creation
-├── pom.xml                         # Maven configuration
-└── README.md                        # This file
+├── pom.xml                              # Parent POM (multi-module)
+├── excel-to-anki-core/                  # Core library module
+│   ├── pom.xml
+│   └── src/
+│       └── main/kotlin/example/exceltoanki/
+│           ├── App.kt                   # CLI application
+│           ├── Card.kt                  # Card data model
+│           ├── CardBuilder.kt           # Card creation logic
+│           ├── ExcelReader.kt           # Excel reading
+│           ├── AnkiWriter.kt            # CSV and media writing
+│           ├── ApkgCreator.kt           # APKG creation
+│           └── TextToSpeechFetcher.kt   # TTS interface and Google Translate implementation
+├── excel-to-anki-ui/                    # Kotlin UI module
+│   ├── pom.xml
+│   └── src/
+│       └── main/kotlin/example/exceltoanki/ui/
+│           ├── ExcelToAnkiUI.kt         # Swing-based GUI
+│           └── ConversionService.kt     # UI business logic
+├── create_apkg_from_csv.py              # Python script for .apkg creation
+└── README.md                            # This file
 ```
+
+### Modules
+
+#### excel-to-anki-core
+The core library containing all the conversion logic:
+- **App.kt**: CLI entry point for command-line usage
+- **ExcelReader.kt**: Reads Excel files and extracts vocabulary pairs with formatting
+- **Card.kt**: Card data model (front/back HTML with optional audio)
+- **CardBuilder.kt**: Creates Card objects from Excel rows, handles TTS synthesis
+- **AnkiWriter.kt**: Writes cards to CSV and media files
+- **ApkgCreator.kt**: Orchestrates Python script to create/update .apkg files
+- **TextToSpeechFetcher.kt**: TTS interface and Google Translate implementation
+
+#### excel-to-anki-ui
+Desktop GUI for the conversion process:
+- **ExcelToAnkiUI.kt**: Swing-based graphical interface with:
+  - Upload button to select Excel files
+  - Language dropdown selectors (EN, NL, NONE)
+  - Convert button to start conversion
+  - Progress bar showing conversion progress
+  - Status area displaying messages and results
+- **ConversionService.kt**: Handles file selection and conversion orchestration
+
+## Architecture & Design
+
+The project follows a **modular Maven architecture** with clear separation of concerns:
+
+### Core Module (`excel-to-anki-core`)
+- **Purpose**: Encapsulates all conversion logic
+- **Reusability**: Can be used as a library in other projects
+- **Execution**: Runnable as CLI (`java -jar excel-to-anki-cli.jar`)
+- **Dependencies**: Minimal - only Apache POI and Python integration
+
+### UI Module (`excel-to-anki-ui`)
+- **Purpose**: Provides user-friendly graphical interface
+- **Dependencies**: Depends on core module for conversion logic
+- **GUI Framework**: Swing-based (no additional dependencies)
+- **Execution**: Desktop application with progress tracking
+
+### Benefits of Modular Design
+1. **Reusability**: Core logic can be integrated into other applications
+2. **Separation of Concerns**: UI and business logic are cleanly separated
+3. **Independent Testing**: Each module can be tested in isolation
+4. **Future Extensibility**: Easy to add new UI implementations (JavaFX, Web UI, etc.)
+5. **Build Flexibility**: Build only what you need
 
 ## How It Works
 
