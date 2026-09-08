@@ -3,8 +3,6 @@ package example.exceltoanki.ui
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 import java.awt.*
-import java.io.PrintWriter
-import java.io.StringWriter
 import kotlin.concurrent.thread
 
 class ExcelToAnkiUI : JFrame("Excel to Anki Converter") {
@@ -49,7 +47,7 @@ class ExcelToAnkiUI : JFrame("Excel to Anki Converter") {
         // Source Language
         topPanel.add(JLabel("Source Language:"))
         sourceLanguageDropdown = JComboBox(SupportedLanguage.getDisplayNames())
-        sourceLanguageDropdown.selectedItem = SupportedLanguage.EN.displayName
+        sourceLanguageDropdown.selectedItem = SupportedLanguage.NL.displayName
         sourceLanguageDropdown.addActionListener {
             state.sourceLanguage = sourceLanguageDropdown.selectedItem as String
         }
@@ -58,7 +56,7 @@ class ExcelToAnkiUI : JFrame("Excel to Anki Converter") {
         // Target Language
         topPanel.add(JLabel("Target Language:"))
         targetLanguageDropdown = JComboBox(SupportedLanguage.getDisplayNames())
-        targetLanguageDropdown.selectedItem = SupportedLanguage.NL.displayName
+        targetLanguageDropdown.selectedItem = SupportedLanguage.EN.displayName
         targetLanguageDropdown.addActionListener {
             state.targetLanguage = targetLanguageDropdown.selectedItem as String
         }

@@ -11,8 +11,8 @@ import javax.swing.filechooser.FileNameExtensionFilter
  */
 class ConversionState {
     var selectedFilePath: String = ""
-    var sourceLanguage: String = SupportedLanguage.EN.displayName
-    var targetLanguage: String = SupportedLanguage.NL.displayName
+    var sourceLanguage: String = SupportedLanguage.NL.displayName
+    var targetLanguage: String = SupportedLanguage.EN.displayName
     var isConverting: Boolean = false
     var progress: Float = 0f
     var progressMessage: String = ""
@@ -21,8 +21,8 @@ class ConversionState {
 
     fun reset() {
         selectedFilePath = ""
-        sourceLanguage = SupportedLanguage.EN.displayName
-        targetLanguage = SupportedLanguage.NL.displayName
+        sourceLanguage = SupportedLanguage.NL.displayName
+        targetLanguage = SupportedLanguage.EN.displayName
         isConverting = false
         progress = 0f
         progressMessage = ""
