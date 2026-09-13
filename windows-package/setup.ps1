@@ -1,6 +1,5 @@
 # Excel to Anki - Automated Setup Script for Windows
-# This script automatically downloads and installs Java and Python
-# Requires: PowerShell 5.0+, admin rights for some operations
+# Installs Java 21 JRE and Python 3 locally into this package folder
 
 param(
     [switch]$SkipJava,
@@ -9,7 +8,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Colors
 function Write-Success {
     Write-Host "[✓] $args" -ForegroundColor Green
 }
@@ -26,11 +24,39 @@ function Write-Warning_ {
     Write-Host "[!] $args" -ForegroundColor Yellow
 }
 
+function Invoke-DownloadFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Url,
+        [Parameter(Mandatory = $true)][string]$DestinationPath
+    )
+    Write-Info "Downloading: $Url"
+    Invoke-WebRequest -Uri $Url -OutFile $DestinationPath -MaximumRedirection 10
+}
+
+function Copy-DirectoryContents {
+    param(
+        [Parameter(Mandatory = $true)][string]$From,
+        [Parameter(Mandatory = $true)][string]$To
+    )
+    if (-not (Test-Path $To)) {
+        New-Item -ItemType Directory -Path $To | Out-Null
+    }
+    Get-ChildItem -LiteralPath $From -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $To -Recurse -Force
+    }
+}
+
 # Get script directory
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $JreDir = Join-Path $ScriptDir "jre"
 $PythonDir = Join-Path $ScriptDir "python"
 $LibDir = Join-Path $ScriptDir "lib"
+$TempDir = Join-Path $env:TEMP "excel-to-anki-setup"
+
+# Download locations
+$JavaJreUrl = "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse"
+$PythonVersion = "3.12.10"
+$PythonInstallerUrl = "https://www.python.org/ftp/python/$PythonVersion/python-$PythonVersion-amd64.exe"
 
 Write-Host ""
 Write-Host "╔════════════════════════════════════════════════════════════════╗"
@@ -43,125 +69,178 @@ Write-Info "JRE Directory: $JreDir"
 Write-Info "Python Directory: $PythonDir"
 Write-Host ""
 
-# Check if running with admin rights (required for some operations)
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    Write-Warning_ "This script should be run as Administrator for full functionality"
-    Write-Info "Some operations may fail without admin rights"
-    Write-Host ""
+if (Test-Path $TempDir) {
+    Remove-Item -Path $TempDir -Recurse -Force
 }
+New-Item -ItemType Directory -Path $TempDir | Out-Null
 
-# Java Setup
-if (-not $SkipJava) {
-    Write-Host ""
-    Write-Info "Checking Java..."
-    
-    if (Test-Path "$JreDir\bin\java.exe") {
-        Write-Success "Java Runtime Environment already installed"
-        & "$JreDir\bin\java.exe" -version 2>&1 | ForEach-Object { Write-Info $_ }
-    } else {
-        Write-Error_ "Java Runtime Environment not found"
+try {
+    # Java Setup
+    if (-not $SkipJava) {
         Write-Host ""
-        Write-Info "To install Java manually:"
-        Write-Host "  1. Download JRE 21 (Windows x64) from:"
-        Write-Host "     https://www.oracle.com/java/technologies/downloads/"
-        Write-Host ""
-        Write-Host "  2. Extract to: $JreDir"
-        Write-Host "     (Ensure $JreDir\bin\java.exe exists)"
-        Write-Host ""
-    }
-}
+        Write-Info "Checking Java 21 JRE..."
 
-# Python Setup
-if (-not $SkipPython) {
-    Write-Host ""
-    Write-Info "Checking Python..."
-    
-    if (Test-Path "$PythonDir\python.exe") {
-        Write-Success "Python already installed"
-        & "$PythonDir\python.exe" --version 2>&1 | ForEach-Object { Write-Info $_ }
-        
-        # Check genanki
-        Write-Info "Checking Python packages..."
-        & "$PythonDir\python.exe" -c "import genanki" 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "genanki is installed"
+        $javaExe = Join-Path $JreDir "bin\java.exe"
+        if (Test-Path $javaExe) {
+            Write-Success "Java Runtime Environment already installed"
+            & $javaExe -version 2>&1 | ForEach-Object { Write-Info $_ }
         } else {
-            Write-Warning_ "genanki not installed, attempting to install..."
-            & "$PythonDir\python.exe" -m pip install --quiet genanki
-            if ($LASTEXITCODE -eq 0) {
-                Write-Success "genanki installed successfully"
-            } else {
-                Write-Error_ "Failed to install genanki"
-                Write-Host ""
-                Write-Info "Please run manually:"
-                Write-Host "  $PythonDir\python.exe -m pip install genanki"
-                Write-Host ""
+            Write-Info "Installing Java 21 JRE (Temurin x64)..."
+            if (Test-Path $JreDir) {
+                Remove-Item -Path $JreDir -Recurse -Force
+            }
+            New-Item -ItemType Directory -Path $JreDir | Out-Null
+
+            $javaZip = Join-Path $TempDir "java-jre21.zip"
+            $javaExtract = Join-Path $TempDir "java-extract"
+            Invoke-DownloadFile -Url $JavaJreUrl -DestinationPath $javaZip
+            Expand-Archive -Path $javaZip -DestinationPath $javaExtract -Force
+
+            $javaRoot = Get-ChildItem -Path $javaExtract -Directory | Where-Object { Test-Path (Join-Path $_.FullName "bin\java.exe") } | Select-Object -First 1
+            if (-not $javaRoot) {
+                throw "Downloaded Java package does not contain bin\java.exe"
+            }
+
+            Copy-DirectoryContents -From $javaRoot.FullName -To $JreDir
+            if (-not (Test-Path $javaExe)) {
+                throw "Java install completed but $javaExe is missing"
+            }
+            Write-Success "Java 21 JRE installed"
+            & $javaExe -version 2>&1 | ForEach-Object { Write-Info $_ }
+        }
+    }
+
+    # Python Setup
+    if (-not $SkipPython) {
+        Write-Host ""
+        Write-Info "Checking Python..."
+
+        $pythonExe = Join-Path $PythonDir "python.exe"
+        if (Test-Path $pythonExe) {
+            Write-Success "Python already installed"
+            & $pythonExe --version 2>&1 | ForEach-Object { Write-Info $_ }
+        } else {
+            Write-Info "Installing Python $PythonVersion (x64)..."
+            if (Test-Path $PythonDir) {
+                Remove-Item -Path $PythonDir -Recurse -Force
+            }
+            New-Item -ItemType Directory -Path $PythonDir | Out-Null
+
+            $pythonInstaller = Join-Path $TempDir "python-installer.exe"
+            Invoke-DownloadFile -Url $PythonInstallerUrl -DestinationPath $pythonInstaller
+
+            $pythonArgs = @(
+                "/quiet",
+                "InstallAllUsers=0",
+                "TargetDir=$PythonDir",
+                "Include_pip=1",
+                "PrependPath=0",
+                "Include_test=0",
+                "Include_launcher=0",
+                "InstallLauncherAllUsers=0",
+                "Shortcuts=0"
+            )
+
+            $installProc = Start-Process -FilePath $pythonInstaller -ArgumentList $pythonArgs -Wait -PassThru -NoNewWindow
+            if ($installProc.ExitCode -ne 0) {
+                throw "Python installer failed with exit code $($installProc.ExitCode)"
+            }
+
+            if (-not (Test-Path $pythonExe)) {
+                throw "Python install completed but $pythonExe is missing"
+            }
+            Write-Success "Python installed"
+            & $pythonExe --version 2>&1 | ForEach-Object { Write-Info $_ }
+        }
+
+        # Create python3 command for compatibility with the app's ProcessBuilder("python3", ...)
+        $python3Shim = Join-Path $PythonDir "python3.cmd"
+        Set-Content -Path $python3Shim -Encoding ASCII -Value "@echo off`r`n`"%~dp0python.exe`" %*`r`n"
+        Write-Success "Created python3 command shim"
+
+        # Ensure pip and install dependencies
+        & $pythonExe -m pip --version *> $null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning_ "pip not detected, running ensurepip..."
+            & $pythonExe -m ensurepip --upgrade
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to bootstrap pip"
             }
         }
+
+        Write-Info "Installing Python package: genanki"
+        & $pythonExe -m pip install --upgrade pip
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to upgrade pip"
+        }
+
+        & $pythonExe -m pip install genanki
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install genanki"
+        }
+
+        & $pythonExe -c "import genanki"
+        if ($LASTEXITCODE -ne 0) {
+            throw "genanki import check failed after installation"
+        }
+        Write-Success "genanki is installed"
+    }
+
+    # Check JARs
+    Write-Host ""
+    Write-Info "Checking Application Files..."
+
+    $uiJar = Join-Path $LibDir "excel-to-anki-ui.jar"
+    $cliJar = Join-Path $LibDir "excel-to-anki-cli.jar"
+
+    if (Test-Path $uiJar) {
+        Write-Success "UI JAR found"
     } else {
-        Write-Error_ "Python not found"
+        Write-Error_ "UI JAR not found at: $uiJar"
+    }
+
+    if (Test-Path $cliJar) {
+        Write-Success "CLI JAR found"
+    } else {
+        Write-Error_ "CLI JAR not found at: $cliJar"
+    }
+
+    # Final status
+    Write-Host ""
+    Write-Host "╔════════════════════════════════════════════════════════════════╗"
+    Write-Host "║                    Setup Complete!                             ║"
+    Write-Host "╚════════════════════════════════════════════════════════════════╝"
+    Write-Host ""
+
+    $javaOk = Test-Path (Join-Path $JreDir "bin\java.exe")
+    $pythonOk = Test-Path (Join-Path $PythonDir "python.exe")
+
+    if ($javaOk -and $pythonOk) {
+        Write-Success "All dependencies installed!"
         Write-Host ""
-        Write-Info "To install Python manually:"
-        Write-Host "  1. Download Embedded Python 3.11+ (Windows x64) from:"
-        Write-Host "     https://www.python.org/downloads/windows/"
-        Write-Host "     (Look for: Windows embeddable package)"
+        Write-Info "You can now run:"
+        Write-Host "  GUI:  $ScriptDir\bin\run-ui.bat"
+        Write-Host "  CLI:  $ScriptDir\bin\run-cli.bat [excel-file]"
         Write-Host ""
-        Write-Host "  2. Extract to: $PythonDir"
-        Write-Host "     (Ensure $PythonDir\python.exe exists)"
-        Write-Host ""
-        Write-Host "  3. Install genanki:"
-        Write-Host "     $PythonDir\python.exe -m pip install genanki"
-        Write-Host ""
+        exit 0
+    } else {
+        Write-Error_ "Some dependencies are missing"
+        if (-not $javaOk) {
+            Write-Warning_ "Java must be installed"
+        }
+        if (-not $pythonOk) {
+            Write-Warning_ "Python must be installed"
+        }
+        exit 1
     }
 }
-
-# Check JARs
-Write-Host ""
-Write-Info "Checking Application Files..."
-
-$uiJar = Join-Path $LibDir "excel-to-anki-ui.jar"
-$cliJar = Join-Path $LibDir "excel-to-anki-cli.jar"
-
-if (Test-Path $uiJar) {
-    Write-Success "UI JAR found"
-} else {
-    Write-Error_ "UI JAR not found at: $uiJar"
+catch {
+    Write-Host ""
+    Write-Error_ $_.Exception.Message
+    exit 1
 }
-
-if (Test-Path $cliJar) {
-    Write-Success "CLI JAR found"
-} else {
-    Write-Error_ "CLI JAR not found at: $cliJar"
-}
-
-# Final status
-Write-Host ""
-Write-Host "╔════════════════════════════════════════════════════════════════╗"
-Write-Host "║                    Setup Complete!                             ║"
-Write-Host "╚════════════════════════════════════════════════════════════════╝"
-Write-Host ""
-
-$javaOk = Test-Path "$JreDir\bin\java.exe"
-$pythonOk = Test-Path "$PythonDir\python.exe"
-
-if ($javaOk -and $pythonOk) {
-    Write-Success "All dependencies installed!"
-    Write-Host ""
-    Write-Info "You can now run:"
-    Write-Host "  GUI:  $ScriptDir\bin\run-ui.bat"
-    Write-Host "  CLI:  $ScriptDir\bin\run-cli.bat <excel-file>"
-    Write-Host ""
-} else {
-    Write-Error_ "Some dependencies are missing"
-    Write-Host ""
-    if (-not $javaOk) {
-        Write-Warning_ "Java must be installed"
+finally {
+    if (Test-Path $TempDir) {
+        Remove-Item -Path $TempDir -Recurse -Force
     }
-    if (-not $pythonOk) {
-        Write-Warning_ "Python must be installed"
-    }
-    Write-Host ""
 }
-
-Write-Host ""
