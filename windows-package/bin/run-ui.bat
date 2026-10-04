@@ -26,7 +26,7 @@ if not exist "%UI_JAR%" (
 )
 
 REM Check if JRE exists
-if not exist "%JAVA_HOME%\bin\java.exe" (
+if not exist "%JAVA_HOME%\java.exe" (
     echo Error: Java Runtime Environment not found at %JAVA_HOME%
     echo Please run setup.bat to install dependencies.
     pause
@@ -36,7 +36,7 @@ if not exist "%JAVA_HOME%\bin\java.exe" (
 REM Launch the GUI application
 echo Starting Excel to Anki Converter...
 cd /d "%SCRIPT_DIR%"
-"%JAVA_HOME%\bin\java.exe" -jar "%UI_JAR%"
+"%JAVA_HOME%\java.exe" -jar "%UI_JAR%"
 
 if %ERRORLEVEL% neq 0 (
     echo.

@@ -7,8 +7,7 @@ This package is now **Java-only**.
 ```
 excel-to-anki-windows/
 ├── bin/
-│   ├── run-ui.bat          # Launch GUI application
-│   └── run-cli.bat         # Launch CLI application
+│   └── run-ui.bat          # Launch GUI application
 ├── lib/
 │   ├── excel-to-anki-ui.jar
 │   └── excel-to-anki-cli.jar
@@ -21,16 +20,7 @@ excel-to-anki-windows/
 ## Setup
 
 1. Run `setup.bat` (or `setup.ps1`) to install/check JRE 21 in the `jre` folder.
-2. Launch:
-   - GUI: `bin\run-ui.bat`
-   - CLI: `bin\run-cli.bat <excel-file>`
-
-## CLI Usage
-
-```batch
-bin\run-cli.bat vocabulary.xlsx
-bin\run-cli.bat vocabulary.xlsx English German en de
-```
+2. Launch GUI: `bin\run-ui.bat`
 
 ## Troubleshooting
 

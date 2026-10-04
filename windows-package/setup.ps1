@@ -95,20 +95,12 @@ try {
     Write-Info "Checking Application Files..."
 
     $uiJar = Join-Path $LibDir "excel-to-anki-ui.jar"
-    $cliJar = Join-Path $LibDir "excel-to-anki-cli.jar"
 
     $filesOk = $true
     if (Test-Path $uiJar) {
         Write-Success "UI JAR found"
     } else {
         Write-Error_ "UI JAR not found at: $uiJar"
-        $filesOk = $false
-    }
-
-    if (Test-Path $cliJar) {
-        Write-Success "CLI JAR found"
-    } else {
-        Write-Error_ "CLI JAR not found at: $cliJar"
         $filesOk = $false
     }
 
@@ -123,7 +115,6 @@ try {
         Write-Host ""
         Write-Info "You can now run:"
         Write-Host "  GUI:  $ScriptDir\bin\run-ui.bat"
-        Write-Host "  CLI:  $ScriptDir\bin\run-cli.bat [excel-file]"
         exit 0
     }
 
