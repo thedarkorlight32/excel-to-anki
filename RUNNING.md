@@ -6,12 +6,6 @@ This guide explains how to run both the CLI and GUI versions of the Excel to Ank
 
 - **Java**: JDK 11 or higher installed and in PATH
 - **Maven**: 3.6.0 or higher (for building from source)
-- **Python**: Python 3.6+ with genanki library (for the conversion process)
-
-### Install Python Dependencies
-```bash
-pip3 install genanki
-```
 
 ## Building the Project
 
@@ -172,9 +166,9 @@ After conversion, you'll have a `.apkg` file:
 **Cause**: Java is not installed or not in PATH
 **Solution**: Install JDK 11+ and add it to your PATH
 
-### "Python script not found" Error
-**Cause**: `create_apkg_from_csv.py` is missing from the project root
-**Solution**: Ensure the Python script is in the same directory as the project root
+### ".apkg creation failed" Error
+**Cause**: Unable to create temp/output files or invalid APKG input during update mode
+**Solution**: Check write permissions and ensure the `--update` path points to a valid `.apkg` file
 
 ### Audio Synthesis Fails
 **Cause**: Network issues or rate limiting from Google Translate

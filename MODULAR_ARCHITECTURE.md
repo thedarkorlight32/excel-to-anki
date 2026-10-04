@@ -48,7 +48,7 @@ excel-to-anki/
 ├── run-ui.sh / run-ui.bat               # Launch GUI application
 ├── RUNNING.md                           # Detailed usage guide
 ├── README.md                            # Project documentation
-├── create_apkg_from_csv.py              # Python helper script
+├── genanki-lib/                         # Kotlin genanki rewrite module
 │
 ├── excel-to-anki-core/                  # Core Library Module
 │   ├── pom.xml
@@ -163,7 +163,7 @@ If you encounter issues:
 1. **Build Fails**: Ensure JDK 11+ is installed
 2. **JAR Not Found**: Run `mvn clean package` first
 3. **GUI Won't Start**: Check Java version with `java -version`
-4. **CLI Errors**: Verify Excel file format and Python script location
+4. **CLI Errors**: Verify Excel file format and output permissions
 
 See RUNNING.md for detailed troubleshooting guide.
 

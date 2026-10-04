@@ -5,11 +5,12 @@ import java.io.File
 /**
  * Result of writing CSV and media files for Anki packaging.
  */
-data class AnkiWriteResult(val notesCsvFile: File, val mediaDir: File, val tmpWorkDir: File)
+data class AnkiNoteFields(val front: String, val back: String)
+data class AnkiWriteResult(val notes: List<AnkiNoteFields>, val notesCsvFile: File, val mediaDir: File, val tmpWorkDir: File)
 
 /**
  * Writes a list of Card instances to notes.csv and media files. Returns paths needed to
- * create the .apkg (the caller is responsible for invoking the Python helper).
+ * create the .apkg.
  */
 class AnkiWriter {
     fun write(cards: List<Card>): AnkiWriteResult {
@@ -19,6 +20,7 @@ class AnkiWriter {
         mediaDir.mkdirs()
 
         val sb = StringBuilder()
+        val notes = mutableListOf<AnkiNoteFields>()
         for ((i, c) in cards.withIndex()) {
             val srcName = "audio_${i + 1}_src.mp3"
             val tgtName = "audio_${i + 1}_tgt.mp3"
@@ -27,6 +29,7 @@ class AnkiWriter {
 
             val frontField = if (c.frontAudio != null) "${c.frontHtml} <br>[sound:$srcName]" else c.frontHtml
             val backField = if (c.backAudio != null) "${c.backHtml} <br>[sound:$tgtName]" else c.backHtml
+            notes += AnkiNoteFields(frontField, backField)
             sb.append(escapeCsv(frontField)).append(',').append(escapeCsv(backField)).append('\n')
         }
 
@@ -34,7 +37,7 @@ class AnkiWriter {
         println("Wrote notes.csv: ${notesCsvFile.absolutePath}")
         println("Wrote ${mediaDir.listFiles()?.size ?: 0} media file(s) to: ${mediaDir.absolutePath}")
 
-        return AnkiWriteResult(notesCsvFile, mediaDir, tmpWorkDir)
+        return AnkiWriteResult(notes, notesCsvFile, mediaDir, tmpWorkDir)
     }
     private fun escapeCsv(field: String): String {
         val needsQuotes = field.contains(',') || field.contains('"') || field.contains('\n') || field.contains('\r')

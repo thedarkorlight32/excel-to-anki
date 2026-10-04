@@ -1,6 +1,6 @@
 @echo off
 REM Excel to Anki - Setup Script for Windows
-REM Runs the PowerShell installer flow for Java 21 JRE + Python
+REM Runs the PowerShell installer flow for Java 21 JRE
 
 setlocal
 set SCRIPT_DIR=%~dp0

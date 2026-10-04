@@ -55,7 +55,7 @@ fun main(args: Array<String>) {
 /**
  * Read first sheet of the Excel file. Expects header row with columns named "English" and "Farsi".
  * For each row, synthesize speech using Google Translate's TTS endpoint, write notes as CSV,
- * and produce an Anki package (.apkg) using Python genanki (for full Anki compatibility).
+ * and produce an Anki package (.apkg) using the Kotlin genanki-lib rewrite.
  * If existingApkg is provided, add cards to the existing package instead of creating a new one.
  * If progressSubscriber is provided, it will receive progress updates as cards are created.
  */
@@ -85,10 +85,10 @@ fun createAnkiPackageFromExcel(
 	
 	val creator = ApkgCreator()
 	if (existingApkg != null) {
-		creator.update(outApkg, writeResult.notesCsvFile, writeResult.mediaDir, writeResult.tmpWorkDir)
+		creator.update(outApkg, writeResult.notes, writeResult.mediaDir, writeResult.tmpWorkDir)
 		println("Updated package: ${outApkg.absolutePath}")
 	} else {
-		creator.create(outApkg, writeResult.notesCsvFile, writeResult.mediaDir, baseName, writeResult.tmpWorkDir)
+		creator.create(outApkg, writeResult.notes, writeResult.mediaDir, baseName, writeResult.tmpWorkDir)
 		println("Created package: ${outApkg.absolutePath}")
 	}
 }

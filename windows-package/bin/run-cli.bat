@@ -1,16 +1,15 @@
 @echo off
 REM Excel to Anki - CLI Launcher for Windows
-REM This script launches the CLI application with bundled Java and Python
+REM This script launches the CLI application with bundled Java
 
 setlocal enabledelayedexpansion
 
 REM Get the directory where this script is located
 set SCRIPT_DIR=%~dp0..
 
-REM Set paths for bundled JRE and Python
+REM Set path for bundled JRE
 set JAVA_HOME=%SCRIPT_DIR%\jre
-set PYTHON_HOME=%SCRIPT_DIR%\python
-set PATH=%JAVA_HOME%\bin;%PYTHON_HOME%;%PYTHON_HOME%\Scripts;%PATH%
+set PATH=%JAVA_HOME%\bin;%PATH%
 
 REM Path to the CLI JAR
 set CLI_JAR=%SCRIPT_DIR%\lib\excel-to-anki-cli.jar

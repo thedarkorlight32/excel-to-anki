@@ -20,12 +20,6 @@ This project reads an Excel file containing English and Farsi vocabulary, automa
 ### System Requirements
 - **Java**: JDK 11 or higher
 - **Maven**: 3.6.0 or higher
-- **Python**: Python 3.6+ with `genanki` library
-
-### Install Python Dependencies
-```bash
-pip3 install genanki
-```
 
 ## Installation & Building
 
@@ -136,6 +130,9 @@ The project is now organized into a multi-module Maven structure:
 ```
 excel-to-anki/
 ├── pom.xml                              # Parent POM (multi-module)
+├── genanki-lib/                         # Kotlin genanki rewrite module
+│   ├── pom.xml
+│   └── src/main/kotlin/example/genanki/ # Model/Note/Deck/Package APKG writer
 ├── excel-to-anki-core/                  # Core library module
 │   ├── pom.xml
 │   └── src/
@@ -145,7 +142,7 @@ excel-to-anki/
 │           ├── CardBuilder.kt           # Card creation logic
 │           ├── ExcelReader.kt           # Excel reading
 │           ├── AnkiWriter.kt            # CSV and media writing
-│           ├── ApkgCreator.kt           # APKG creation
+│           ├── ApkgCreator.kt           # APKG creation via genanki-lib
 │           └── TextToSpeechFetcher.kt   # TTS interface and Google Translate implementation
 ├── excel-to-anki-ui/                    # Kotlin UI module
 │   ├── pom.xml
@@ -153,7 +150,6 @@ excel-to-anki/
 │       └── main/kotlin/example/exceltoanki/ui/
 │           ├── ExcelToAnkiUI.kt         # Swing-based GUI
 │           └── ConversionService.kt     # UI business logic
-├── create_apkg_from_csv.py              # Python script for .apkg creation
 └── README.md                            # This file
 ```
 
@@ -166,7 +162,7 @@ The core library containing all the conversion logic:
 - **Card.kt**: Card data model (front/back HTML with optional audio)
 - **CardBuilder.kt**: Creates Card objects from Excel rows, handles TTS synthesis
 - **AnkiWriter.kt**: Writes cards to CSV and media files
-- **ApkgCreator.kt**: Orchestrates Python script to create/update .apkg files
+- **ApkgCreator.kt**: Creates/updates `.apkg` using the Kotlin `genanki-lib` module
 - **TextToSpeechFetcher.kt**: TTS interface and Google Translate implementation
 
 #### excel-to-anki-ui
@@ -187,7 +183,7 @@ The project follows a **modular Maven architecture** with clear separation of co
 - **Purpose**: Encapsulates all conversion logic
 - **Reusability**: Can be used as a library in other projects
 - **Execution**: Runnable as CLI (`java -jar excel-to-anki-cli.jar`)
-- **Dependencies**: Minimal - only Apache POI and Python integration
+- **Dependencies**: Apache POI + Kotlin-native APKG generation via `genanki-lib`
 
 ### UI Module (`excel-to-anki-ui`)
 - **Purpose**: Provides user-friendly graphical interface
@@ -217,7 +213,7 @@ The project follows a **modular Maven architecture** with clear separation of co
 ### 3. Flashcard Creation
 - Combines formatted text with audio using Anki HTML format
 - Creates CSV with front (English + audio) and back (Farsi) fields
-- Uses Python `genanki` library to package into .apkg format
+- Uses Kotlin `genanki-lib` module to package into .apkg format
 
 ### 4. Media Embedding
 - Embeds all audio files directly in the .apkg package
@@ -235,8 +231,8 @@ To modify language pairs, columns, or TTS languages, pass optional positional ar
 
 ## Troubleshooting
 
-### Issue: "Python script create_apkg_from_csv.py not found"
-**Solution**: Ensure `create_apkg_from_csv.py` is in the project root or the working directory when running the JAR.
+### Issue: ".apkg creation failed"
+**Solution**: Ensure the process can create temporary files and write output in the target directory.
 
 ### Issue: "Failed to synthesize" errors
 **Possible causes**:
@@ -274,16 +270,12 @@ mvn clean install -U
 - **Apache POI**: Reading and processing Excel files
 - **Kotlin stdlib**: Kotlin standard library
 
-### Python
-- **genanki**: Creating Anki package files
-- Built on: Python 3.6+
-
 See `pom.xml` for exact versions.
 
 ## Advanced Usage
 
 ### Custom Deck Names
-The deck name is automatically set to your Excel filename. To change it, modify the Python script invocation in `App.kt`.
+The deck name is automatically set to your Excel filename. To change it, modify the `deckName` used in `createAnkiPackageFromExcel` / `ApkgCreator`.
 
 ### Batch Processing
 To process multiple Excel files:
@@ -338,4 +330,3 @@ For issues or questions:
 - Audio synthesis support
 - Text formatting preservation (bold, italic, underline)
 - Multiple language support
-

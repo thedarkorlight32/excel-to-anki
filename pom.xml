@@ -15,6 +15,7 @@
   </parent>
 
   <modules>
+    <module>genanki-lib</module>
     <module>excel-to-anki-core</module>
     <module>excel-to-anki-ui</module>
   </modules>
